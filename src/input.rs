@@ -530,6 +530,7 @@ impl Element for TextElement {
             background_color: None,
             underline: None,
             strikethrough: None,
+            letter_spacing: Default::default(),
         };
         let runs = if let Some(marked_range) = input.marked_range.as_ref() {
             vec![
