@@ -856,6 +856,15 @@ impl InputExample {
         self.text_input.read(cx).content.to_string()
     }
 
+    /// Puts `text` in the field (a draft given back after process death).
+    pub fn set_text(&self, text: &str, cx: &mut App) {
+        self.text_input.update(cx, |input, cx| {
+            input.content = text.to_string().into();
+            input.selected_range = text.len()..text.len();
+            cx.notify();
+        });
+    }
+
     /// The field's focus handle.
     pub fn text_input_focus(&self, cx: &App) -> FocusHandle {
         self.text_input.read(cx).focus_handle.clone()

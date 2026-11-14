@@ -49,8 +49,19 @@ impl Hello {
             });
         })
         .detach();
+        cx.on_app_lifecycle(|phase, _| log::info!("fancy-hello lifecycle {phase:?}"))
+            .detach();
+        cx.on_memory_warning(|_| log::info!("fancy-hello memory warning"))
+            .detach();
+        // What the system gave back after it killed the process: the
+        // counter and the draft (see `save`).
+        let (taps, draft) = restored().unwrap_or_default();
+        if !draft.is_empty() || taps > 0 {
+            log::info!("fancy-hello restored: taps {taps}, draft {draft:?}");
+            field.update(cx, |field, cx| field.set_text(&draft, cx));
+        }
         Self {
-            taps: 0,
+            taps,
             field,
             scroll: ScrollHandle::new(),
             menu_row: None,
@@ -200,6 +211,7 @@ impl Render for Hello {
             self.scroll.offset().y
         );
         let insets = self.log_insets(window);
+        save(self.taps, &self.field.read(cx).text(cx));
         div()
             .key_context("Hello")
             .track_focus(&self.focus)
@@ -218,6 +230,28 @@ impl Render for Hello {
             .child(div().p_2().child(self.field.clone()))
             .children(self.panel())
     }
+}
+
+/// Keeps the counter and the draft where the system finds them if it kills
+/// the process in the background.
+fn save(taps: u32, draft: &str) {
+    #[cfg(target_os = "android")]
+    gpui_mobile::android::lifecycle::set_saved_state(format!("{taps}\n{draft}").into_bytes());
+    #[cfg(not(target_os = "android"))]
+    let _ = (taps, draft);
+}
+
+/// The counter and draft [`save`] kept, if the process was recreated.
+fn restored() -> Option<(u32, String)> {
+    #[cfg(target_os = "android")]
+    {
+        let bytes = gpui_mobile::android::lifecycle::restored_state()?;
+        let text = String::from_utf8(bytes).ok()?;
+        let (taps, draft) = text.split_once('\n')?;
+        Some((taps.parse().ok()?, draft.to_string()))
+    }
+    #[cfg(not(target_os = "android"))]
+    None
 }
 
 #[cfg(target_os = "android")]
