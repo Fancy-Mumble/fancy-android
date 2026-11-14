@@ -1,0 +1,52 @@
+# Fancy Mumble's native client as an Android app: the library the host's
+# NativeActivity loads (F:\fancy-migrate\android-host, built with
+# -PnativeLibraryName=fancy_mumble_android -PapplicationId=...).
+#
+# It runs the client's own code (`fancy_gpui::Launch`, the library half of
+# fancy-gpui) on gpui_mobile's Android platform. Until the port carries the
+# library split, it depends on F:\fancy-migrate\client-android-trial, a copy
+# of the port with that split and the screen-share gate applied (see
+# F:\fancy-migrate\notes\android\client-lib-split.patch and
+# screenshare-gate.patch); when the port has them, `fancy-gpui` below points
+# at client-2-edit (or the project's vendor/client) instead.
+[workspace]
+
+[package]
+name = "fancy-mumble-android"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "MIT"
+
+[lib]
+name = "fancy_mumble_android"
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[target.'cfg(target_os = "android")'.dependencies]
+fancy-gpui = { path = "../client-android-trial/src/ui/gpui", default-features = false }
+gpui = { path = "../gpui-next/crates/gpui", default-features = false }
+# The system clipboard (copy and paste with other apps).
+gpui_mobile = { path = "../gpui-next/crates/gpui_mobile", default-features = false, features = ["clipboard"] }
+android-activity = { version = "0.6", features = ["native-activity"] }
+android_logger = "0.15"
+log = "0.4"
+
+# What fancy-gpui's own manifest patches, repeated: a patch applies only from
+# the manifest at the root of a build.
+[patch.crates-io]
+async-process = { git = "https://github.com/zed-industries/async-process.git", rev = "0b6d6713570af61806e1e5cb40e0f757cb93fd9d" }
+async-task = { git = "https://github.com/zed-industries/async-task.git", rev = "015845a19fc31752c02367567d3b8900a406f9da" }
+calloop = { git = "https://github.com/zed-industries/calloop" }
+
+# As the test program's (android-hello), so a build reuses its GPUI.
+[profile.dev.package."*"]
+opt-level = 1
+debug = false
+
+[profile.release]
+opt-level = "s"
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
