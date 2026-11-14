@@ -2,19 +2,26 @@ package dev.gpui.mobile;
 
 import android.app.NativeActivity;
 import android.content.pm.PackageManager;
+import android.graphics.Insets;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.Selection;
 import android.text.TextWatcher;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
+import android.view.WindowInsetsAnimation;
 import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputConnectionWrapper;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+
+import java.util.List;
 
 /** NativeActivity with a UI-thread InputConnection for multistage IMEs. */
 public class GpuiInputActivity extends NativeActivity {
@@ -30,7 +37,69 @@ public class GpuiInputActivity extends NativeActivity {
             throw new IllegalStateException(error);
         }
         super.onCreate(state);
+        watchInsets();
     }
+
+    /**
+     * Reports the system bars, the display cutout and the soft keyboard to
+     * the native side, at each change and at every step of the keyboard's
+     * animation (Android 11 and later).
+     */
+    private void watchInsets() {
+        View decor = getWindow().getDecorView();
+        decor.setOnApplyWindowInsetsListener((view, insets) -> {
+            // While the keyboard animates, the end state arrives here first;
+            // the animation's own steps are reported instead.
+            if (insetAnimations == 0) reportInsets(insets);
+            return view.onApplyWindowInsets(insets);
+        });
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            decor.setWindowInsetsAnimationCallback(new WindowInsetsAnimation.Callback(
+                    WindowInsetsAnimation.Callback.DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
+                @Override public void onPrepare(WindowInsetsAnimation animation) {
+                    insetAnimations++;
+                }
+                @Override public WindowInsets onProgress(WindowInsets insets,
+                        List<WindowInsetsAnimation> running) {
+                    reportInsets(insets);
+                    return insets;
+                }
+                @Override public void onEnd(WindowInsetsAnimation animation) {
+                    insetAnimations = Math.max(0, insetAnimations - 1);
+                    WindowInsets settled = decor.getRootWindowInsets();
+                    if (insetAnimations == 0 && settled != null) reportInsets(settled);
+                }
+            });
+        }
+    }
+
+    /** Inset animations running now (UI thread only). */
+    private int insetAnimations;
+
+    private void reportInsets(WindowInsets insets) {
+        float density = getResources().getDisplayMetrics().density;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Insets safe = insets.getInsets(
+                    WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+            Insets ime = insets.getInsets(WindowInsets.Type.ime());
+            nativeInsets(density, safe.left, safe.top, safe.right, safe.bottom,
+                    ime.left, ime.top, ime.right, ime.bottom);
+        } else {
+            // Before Android 11 the system window insets include the keyboard;
+            // the stable insets are the bars alone.
+            @SuppressWarnings("deprecation") int keyboard = Math.max(0,
+                    insets.getSystemWindowInsetBottom() - insets.getStableInsetBottom());
+            @SuppressWarnings("deprecation") int left = insets.getStableInsetLeft();
+            @SuppressWarnings("deprecation") int top = insets.getStableInsetTop();
+            @SuppressWarnings("deprecation") int right = insets.getStableInsetRight();
+            @SuppressWarnings("deprecation") int bottom = insets.getStableInsetBottom();
+            nativeInsets(density, left, top, right, bottom, 0, 0, 0,
+                    keyboard > 0 ? keyboard + bottom : 0);
+        }
+    }
+
+    private static native void nativeInsets(float density, int safeLeft, int safeTop,
+            int safeRight, int safeBottom, int imeLeft, int imeTop, int imeRight, int imeBottom);
 
     public void gpuiShowKeyboard(int keyboardType, long session) {
         runOnUiThread(() -> {
