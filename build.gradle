@@ -1,0 +1,8 @@
+// The Android host for GPUI programs built with gpui-next: a NativeActivity
+// (gpui-mobile's GpuiInputActivity, for the input method) loading the Rust
+// library named in app/build.gradle. Build output goes to C:\fancy-build.
+buildscript {
+    repositories { google(); mavenCentral() }
+    dependencies { classpath 'com.android.tools.build:gradle:8.11.0' }
+}
+allprojects { layout.buildDirectory = file("F:/fancy-build/android-host/${project.name}") }
