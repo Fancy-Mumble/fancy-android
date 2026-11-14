@@ -27,6 +27,8 @@ pub struct Hello {
     panel_open: bool,
     /// The insets last logged, to log only changes.
     logged_insets: Option<gpui::Edges<gpui::Pixels>>,
+    /// The root's focus, so keys (back is Escape) reach it with no field focused.
+    focus: gpui::FocusHandle,
 }
 
 impl Hello {
@@ -54,6 +56,7 @@ impl Hello {
             menu_row: None,
             panel_open: false,
             logged_insets: None,
+            focus: cx.focus_handle(),
         }
     }
 
@@ -198,6 +201,7 @@ impl Render for Hello {
         let insets = self.log_insets(window);
         div()
             .key_context("Hello")
+            .track_focus(&self.focus)
             .on_action(cx.listener(Self::back))
             .size_full()
             .flex()
@@ -235,6 +239,9 @@ fn android_main(app: android_activity::AndroidApp) {
     Application::with_platform(shared.into_rc()).run(|cx: &mut App| {
         cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|cx| Hello::new(window, cx))
+        })
+        .and_then(|window| {
+            window.update(cx, |hello, window, cx| window.focus(&hello.focus, cx))
         })
         .expect("a window");
     });
