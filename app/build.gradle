@@ -3,7 +3,10 @@ android {
     namespace 'com.fancymumble.gpuihost'
     compileSdk 34
     defaultConfig {
-        applicationId 'com.fancymumble.gpuihost'
+        // The test program by default; the client builds with
+        // -PapplicationId=com.fancymumble.gpui -PnativeLibraryName=fancy_mumble_android
+        // (an identifier of its own: never the web client's com.fancymumble.app).
+        applicationId project.findProperty('applicationId') ?: 'com.fancymumble.gpuihost'
         minSdk 26
         targetSdk 34
         versionCode 1
