@@ -1,0 +1,36 @@
+# A small GPUI program for trying the Android platform of gpui-next on a
+# device: text, a counter, a long list to scroll and fling, a text field
+# through GPUI's input handler. Built as the library a NativeActivity loads
+# (see ../android-host).
+[workspace]
+
+[package]
+name = "fancy-android-hello"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+name = "fancy_android_hello"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+gpui = { path = "../gpui-next/crates/gpui", default-features = false }
+log = "0.4"
+unicode-segmentation = "1.10"
+
+[target.'cfg(target_os = "android")'.dependencies]
+gpui_mobile = { path = "../gpui-next/crates/gpui_mobile", default-features = false }
+android-activity = { version = "0.6", features = ["native-activity"] }
+android_logger = "0.15"
+
+[profile.dev.package."*"]
+opt-level = 1
+debug = false
+
+[profile.release]
+opt-level = "s"
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
