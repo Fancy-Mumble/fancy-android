@@ -4,13 +4,16 @@ import android.app.Activity;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
 import android.widget.FrameLayout;
+import android.widget.PopupWindow;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -102,10 +105,9 @@ public class GpuiPlatformView {
                 + " bounds=(" + x + ", " + y + ", " + width + ", " + height + ")"
                 + " params=" + creationParams);
 
-        ensureRootContainer(activity);
-
         // Parse creation params
         Map<String, String> params = parseCreationParams(creationParams);
+        params.put("view_id", String.valueOf(viewId));
 
         mainHandler.post(() -> {
             try {
@@ -134,10 +136,22 @@ public class GpuiPlatformView {
                 views.put(viewId, view != null ? view : container);
                 containers.put(viewId, container);
 
-                // Add to root container
-                if (rootContainer != null) {
-                    rootContainer.addView(container);
-                }
+                // A NativeActivity's own window surface belongs to the native
+                // code (takeSurface): views added to its content are laid out
+                // but never drawn. Each platform view gets a sub-window of its
+                // own at its rectangle instead, drawn above the GPUI surface;
+                // touches inside it go to it, the rest to GPUI.
+                container.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                PopupWindow window = new PopupWindow(container,
+                    (int)(width * density), (int)(height * density), false);
+                window.setClippingEnabled(false);
+                window.setTouchable(true);
+                windows.put(viewId, window);
+                anchors.put(viewId, activity.getWindow().getDecorView());
+                rects.put(viewId, new int[] {(int)(x * density), (int)(y * density),
+                    (int)(width * density), (int)(height * density)});
+                showWindow(viewId);
 
                 Log.i(TAG, "View created: id=" + viewId + " type=" + viewType);
             } catch (Exception e) {
@@ -218,6 +232,8 @@ public class GpuiPlatformView {
         boolean zoom = Boolean.parseBoolean(params.getOrDefault("zoom_enabled", "true"));
         String url = params.getOrDefault("url", "");
         String html = params.getOrDefault("html", "");
+        String baseUrl = params.getOrDefault("base_url", null);
+        long viewId = Long.parseLong(params.getOrDefault("view_id", "0"));
 
         WebView wv = new WebView(activity);
         WebSettings settings = wv.getSettings();
@@ -230,9 +246,14 @@ public class GpuiPlatformView {
 
         wv.setWebViewClient(new WebViewClient());
         wv.setWebChromeClient(new WebChromeClient());
+        // Media starts without a tap only where the app asks (an embedded player).
+        settings.setMediaPlaybackRequiresUserGesture(
+                !Boolean.parseBoolean(params.getOrDefault("autoplay", "false")));
+        // The page talks back through window.fancyNative.postMessage(string).
+        wv.addJavascriptInterface(new Bridge(viewId), "fancyNative");
 
         if (!html.isEmpty()) {
-            wv.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+            wv.loadDataWithBaseURL(baseUrl, html, "text/html", "UTF-8", null);
         } else if (!url.isEmpty()) {
             wv.loadUrl(url);
         }
@@ -267,13 +288,13 @@ public class GpuiPlatformView {
 
             Activity activity = (Activity) container.getContext();
             float density = activity.getResources().getDisplayMetrics().density;
-
-            FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) container.getLayoutParams();
-            params.leftMargin = (int)(x * density);
-            params.topMargin = (int)(y * density);
-            params.width = (int)(width * density);
-            params.height = (int)(height * density);
-            container.setLayoutParams(params);
+            int[] rect = {(int)(x * density), (int)(y * density),
+                (int)(width * density), (int)(height * density)};
+            rects.put(viewId, rect);
+            PopupWindow window = windows.get(viewId);
+            if (window != null && window.isShowing()) {
+                window.update(rect[0], rect[1], rect[2], rect[3]);
+            }
         });
     }
 
@@ -285,8 +306,50 @@ public class GpuiPlatformView {
             FrameLayout container = containers.get(viewId);
             if (container == null) return;
             container.setVisibility(visible ? View.VISIBLE : View.GONE);
+            if (visible) {
+                hidden.remove(viewId);
+                showWindow(viewId);
+            } else {
+                hidden.add(viewId);
+                PopupWindow window = windows.get(viewId);
+                if (window != null) window.dismiss();
+            }
         });
     }
+
+    /** Puts view {@code viewId}'s sub-window on screen at its rectangle. */
+    private static void showWindow(long viewId) {
+        PopupWindow window = windows.get(viewId);
+        View anchor = anchors.get(viewId);
+        int[] rect = rects.get(viewId);
+        if (window == null || anchor == null || rect == null || hidden.contains(viewId)) return;
+        if (window.isShowing()) {
+            window.update(rect[0], rect[1], rect[2], rect[3]);
+        } else if (anchor.getWindowToken() != null) {
+            window.setWidth(rect[2]);
+            window.setHeight(rect[3]);
+            window.showAtLocation(anchor, Gravity.NO_GRAVITY, rect[0], rect[1]);
+        } else {
+            // The activity's window is not attached yet: try again shortly.
+            mainHandler.postDelayed(() -> showWindow(viewId), 50);
+        }
+    }
+
+    /** Takes view {@code viewId}'s sub-window off screen and forgets it. */
+    private static void removeWindow(long viewId) {
+        PopupWindow window = windows.remove(viewId);
+        if (window != null) window.dismiss();
+        anchors.remove(viewId);
+        rects.remove(viewId);
+        hidden.remove(viewId);
+    }
+
+    /** Each view's sub-window, the view it is shown over, and its rectangle in pixels. */
+    private static final Map<Long, PopupWindow> windows = new HashMap<>();
+    private static final Map<Long, View> anchors = new HashMap<>();
+    private static final Map<Long, int[]> rects = new HashMap<>();
+    /** Views the app hid; pausing and resuming leaves them hidden. */
+    private static final java.util.Set<Long> hidden = new java.util.HashSet<>();
 
     /**
      * Set the z-order of a platform view.
@@ -305,18 +368,53 @@ public class GpuiPlatformView {
      */
     public static void disposeView(long viewId) {
         mainHandler.post(() -> {
+            removeWindow(viewId);
             FrameLayout container = containers.get(viewId);
             if (container != null) {
-                if (rootContainer != null) {
-                    rootContainer.removeView(container);
-                }
                 container.removeAllViews();
                 containers.remove(viewId);
             }
-            views.remove(viewId);
+            View view = views.remove(viewId);
+            if (view instanceof WebView) ((WebView) view).destroy();
             Log.i(TAG, "View disposed: id=" + viewId);
         });
     }
+
+    /**
+     * Loads {@code html} into web view {@code viewId} as if it came from
+     * {@code baseUrl} (an https origin, so an embedded player accepts it).
+     */
+    public static void loadHtml(long viewId, String html, String baseUrl) {
+        mainHandler.post(() -> {
+            View view = views.get(viewId);
+            if (view instanceof WebView) {
+                ((WebView) view).loadDataWithBaseURL(baseUrl, html, "text/html", "UTF-8", null);
+            }
+        });
+    }
+
+    /** Runs {@code script} in web view {@code viewId}'s page. */
+    public static void evaluate(long viewId, String script) {
+        mainHandler.post(() -> {
+            View view = views.get(viewId);
+            if (view instanceof WebView) ((WebView) view).evaluateJavascript(script, null);
+        });
+    }
+
+    /** What a page sends the app: one string at a time, to Rust. */
+    private static final class Bridge {
+        private final long viewId;
+
+        Bridge(long viewId) {
+            this.viewId = viewId;
+        }
+
+        @JavascriptInterface public void postMessage(String message) {
+            nativeWebMessage(viewId, message == null ? "" : message);
+        }
+    }
+
+    private static native void nativeWebMessage(long viewId, String message);
 
     /**
      * Get the native View for a given platform view ID.
@@ -339,8 +437,8 @@ public class GpuiPlatformView {
      */
     public static void pauseAll() {
         mainHandler.post(() -> {
-            for (FrameLayout container : containers.values()) {
-                container.setVisibility(View.INVISIBLE);
+            for (PopupWindow window : windows.values()) {
+                window.dismiss();
             }
             Log.i(TAG, "All platform views paused");
         });
@@ -352,8 +450,8 @@ public class GpuiPlatformView {
      */
     public static void resumeAll() {
         mainHandler.post(() -> {
-            for (FrameLayout container : containers.values()) {
-                container.setVisibility(View.VISIBLE);
+            for (Long viewId : windows.keySet()) {
+                showWindow(viewId);
             }
             Log.i(TAG, "All platform views resumed");
         });
@@ -364,11 +462,14 @@ public class GpuiPlatformView {
      */
     public static void disposeAll() {
         mainHandler.post(() -> {
+            for (Long viewId : new java.util.ArrayList<>(windows.keySet())) {
+                removeWindow(viewId);
+            }
             for (FrameLayout container : containers.values()) {
-                if (rootContainer != null) {
-                    rootContainer.removeView(container);
-                }
                 container.removeAllViews();
+            }
+            for (View view : views.values()) {
+                if (view instanceof WebView) ((WebView) view).destroy();
             }
             views.clear();
             containers.clear();
