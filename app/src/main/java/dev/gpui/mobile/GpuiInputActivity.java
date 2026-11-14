@@ -38,6 +38,20 @@ public class GpuiInputActivity extends NativeActivity {
         }
         super.onCreate(state);
         watchInsets();
+        FancySystem.receive(this, getIntent());
+    }
+
+    /** A share into the running app (launchMode singleTask). */
+    @Override protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        FancySystem.receive(this, intent);
+    }
+
+    @Override public void onRequestPermissionsResult(int code, String[] permissions,
+            int[] results) {
+        super.onRequestPermissionsResult(code, permissions, results);
+        FancySystem.onResult(this, code, permissions, results);
     }
 
     /**
