@@ -110,21 +110,62 @@ public class GpuiInputActivity extends NativeActivity {
                 addContentView(input, new ViewGroup.LayoutParams(1, 1));
             }
             input.reset(session);
-            int type = InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE;
-            switch (keyboardType) {
-                case 1: type = InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS; break;
-                case 2: type = InputType.TYPE_CLASS_PHONE; break;
-                case 3: type = InputType.TYPE_CLASS_NUMBER; break;
-                case 4: type = InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI; break;
-                case 5: type = InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL; break;
-            }
-            input.setInputType(type);
-            input.setImeOptions(EditorInfo.IME_FLAG_NO_EXTRACT_UI);
+            shownKeyboardType = keyboardType;
+            applyKeyboardConfiguration();
             input.requestFocus();
             InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
             imm.restartInput(input);
             imm.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT);
         });
+    }
+
+    /** The focused field's keyboard type, kept for a reconfiguration. */
+    private int shownKeyboardType;
+    /** {@code EditorInfo.IME_ACTION_*} the focused field asked for; 0 for none. */
+    private int imeAction;
+    /** {@code InputType.TYPE_TEXT_FLAG_CAP_*} the focused field asked for. */
+    private int capitalize;
+    private boolean autocorrect;
+    private boolean suggestions;
+
+    /**
+     * The focused field's text assistance and action key (GPUI's
+     * TextInputConfiguration); applied at once if the keyboard is up.
+     */
+    public void gpuiConfigureKeyboard(int action, int capitalizeFlags, boolean correct,
+            boolean suggest) {
+        runOnUiThread(() -> {
+            imeAction = action;
+            capitalize = capitalizeFlags;
+            autocorrect = correct;
+            suggestions = suggest;
+            if (input != null && input.hasFocus()) {
+                applyKeyboardConfiguration();
+                ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE)).restartInput(input);
+            }
+        });
+    }
+
+    private void applyKeyboardConfiguration() {
+        int type;
+        switch (shownKeyboardType) {
+            case 1: type = InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS; break;
+            case 2: type = InputType.TYPE_CLASS_PHONE; break;
+            case 3: type = InputType.TYPE_CLASS_NUMBER; break;
+            case 4: type = InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI; break;
+            case 5: type = InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL; break;
+            default:
+                type = InputType.TYPE_CLASS_TEXT | capitalize;
+                // A field with an action key gets that key; without one the
+                // enter key types a line break.
+                if (imeAction == 0) type |= InputType.TYPE_TEXT_FLAG_MULTI_LINE;
+                if (autocorrect) type |= InputType.TYPE_TEXT_FLAG_AUTO_CORRECT;
+                if (!suggestions && !autocorrect) type |= InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
+        }
+        input.setInputType(type);
+        input.setImeOptions(EditorInfo.IME_FLAG_NO_EXTRACT_UI | imeAction);
+        android.util.Log.d("GpuiInputActivity", "keyboard: inputType=0x"
+                + Integer.toHexString(type) + " action=" + imeAction);
     }
 
     public void gpuiHideKeyboard(long session) {
@@ -283,6 +324,12 @@ public class GpuiInputActivity extends NativeActivity {
                 }
                 @Override public boolean performEditorAction(int action) {
                     if (connectionSession != session) return false;
+                    if (imeAction != 0) {
+                        // The action key the field asked for: GPUI gets enter.
+                        finishComposingText();
+                        nativeIme(session, 6, "", action, 0);
+                        return true;
+                    }
                     if (action == EditorInfo.IME_ACTION_DONE) {
                         finishComposingText();
                         nativeIme(session, 4, "", 0, 0);
