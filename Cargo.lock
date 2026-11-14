@@ -1293,6 +1293,7 @@ dependencies = [
  "jni 0.22.4",
  "libc",
  "log",
+ "memmap2",
  "ndk",
  "ndk-context",
  "ndk-sys",
