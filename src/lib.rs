@@ -8,6 +8,8 @@
 //! window's insets and the scroll position.
 
 mod input;
+#[cfg(target_os = "android")]
+mod services_demo;
 
 use gpui::{
     App, Context, Entity, KeyBinding, MouseButton, ScrollHandle, Window, actions, div, prelude::*,
@@ -29,6 +31,8 @@ pub struct Hello {
     logged_insets: Option<gpui::Edges<gpui::Pixels>>,
     /// The root's focus, so keys (back is Escape) reach it with no field focused.
     focus: gpui::FocusHandle,
+    /// The Android services demo row (permissions, service, ...).
+    services: Option<gpui::AnyView>,
 }
 
 impl Hello {
@@ -68,6 +72,10 @@ impl Hello {
             panel_open: false,
             logged_insets: None,
             focus: cx.focus_handle(),
+            #[cfg(target_os = "android")]
+            services: Some(cx.new(services_demo::ServicesDemo::new).into()),
+            #[cfg(not(target_os = "android"))]
+            services: None,
         }
     }
 
@@ -226,6 +234,7 @@ impl Render for Hello {
             .bg(rgb(0x1e1e2e))
             .text_color(rgb(0xe0e0e0))
             .child(self.header(cx))
+            .children(self.services.clone())
             .child(self.rows(cx))
             .child(div().p_2().child(self.field.clone()))
             .children(self.panel())
