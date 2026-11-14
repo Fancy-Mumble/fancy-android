@@ -32,7 +32,23 @@ port (`../client-2-edit/src/ui/gpui`, later the project's
 `vendor/client/src/ui/gpui`), copy its `Cargo.lock`, delete
 `../client-android-trial`. Nothing else here changes.
 
+A third change is the engine's (`crates/mumble-tauri`, shared with the web
+client): `F:\fancy-migrate\notes\android\engine-log-try-init.patch`. Its
+`logging::init` installed the tracing subscriber with `.init()`, which
+panics when a `log` logger is set already, as gpui_mobile sets one for
+logcat; with `.try_init()` the subscriber is installed and only the `log`
+bridge is left out.
+
+The APK needs the NDK's `libc++_shared.so` beside the library (the engine's
+C++: oboe); `<scratchpad>\agent-android-backend\apk-client.ps1` packages
+both.
+
 ## Checked
+
+On the emulator: the client starts with the real engine on gpui_mobile and
+shows its connect screen (`F:\fancy-migrate\notes\android\cl1-client-start.png`,
+log `cl1-client-log.txt`), still in the desktop layout; 72.4 MB PSS
+(`mem-client-start.txt`) against the web client's 330 to 440 MB.
 
 `cargo check --target x86_64-linux-android` of the client library (with
 the engine, `mumble-tauri` without its web layer) and of this package:
