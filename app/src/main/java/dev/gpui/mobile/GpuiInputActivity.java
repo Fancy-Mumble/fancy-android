@@ -98,6 +98,14 @@ public class GpuiInputActivity extends NativeActivity {
         }
     }
 
+    /** Memory pressure reaches GPUI as a memory warning. */
+    @Override public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        nativeTrimMemory(level);
+    }
+
+    private static native void nativeTrimMemory(int level);
+
     private static native void nativeInsets(float density, int safeLeft, int safeTop,
             int safeRight, int safeBottom, int imeLeft, int imeTop, int imeRight, int imeBottom);
 
