@@ -152,7 +152,8 @@ impl Hello {
                     .on_mouse_down(
                         MouseButton::Right,
                         cx.listener(move |hello, _, _, cx| {
-                            log::info!("fancy-hello row {i} secondary click");
+                            log::info!("fancy-hello row {i} secondary click, copied");
+                            cx.write_to_clipboard(gpui::ClipboardItem::new_string(format!("Row {i}")));
                             hello.menu_row = Some(i);
                             cx.notify();
                         }),
@@ -214,7 +215,7 @@ impl Render for Hello {
             .text_color(rgb(0xe0e0e0))
             .child(self.header(cx))
             .child(self.rows(cx))
-            .child(div().p_2().h(px(150.)).child(self.field.clone()))
+            .child(div().p_2().child(self.field.clone()))
             .children(self.panel())
     }
 }
