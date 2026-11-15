@@ -1,7 +1,8 @@
-# A small GPUI program for trying the Android platform of gpui-next on a
-# device: text, a counter, a long list to scroll and fling, a text field
+# A small GPUI program for trying the Android platform of Fancy-Mumble/gpui
+# on a device: text, a counter, a long list to scroll and fling, a text field
 # through GPUI's input handler. Built as the library a NativeActivity loads
-# (see ../android-host).
+# (see ../android-host). GPUI comes from the fork's `develop` branch; the
+# commit is in Cargo.lock.
 [workspace]
 
 [package]
@@ -15,12 +16,12 @@ name = "fancy_android_hello"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-gpui = { path = "../gpui-next/crates/gpui", default-features = false }
+gpui = { git = "https://github.com/Fancy-Mumble/gpui", branch = "develop", default-features = false }
 log = "0.4"
 unicode-segmentation = "1.10"
 
 [target.'cfg(target_os = "android")'.dependencies]
-gpui_mobile = { path = "../gpui-next/crates/gpui_mobile", default-features = false, features = ["clipboard"] }
+gpui_mobile = { git = "https://github.com/Fancy-Mumble/gpui", branch = "develop", default-features = false, features = ["clipboard"] }
 android-activity = { version = "0.6", features = ["native-activity"] }
 android_logger = "0.15"
 

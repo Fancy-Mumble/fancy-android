@@ -433,6 +433,7 @@ dependencies = [
 [[package]]
 name = "collections"
 version = "0.1.0"
+source = "git+https://github.com/Fancy-Mumble/gpui?branch=develop#1c42c1584cf0f8b11f78725c9ae772f7f92d6386"
 dependencies = [
  "gpui_util",
  "indexmap",
@@ -638,6 +639,7 @@ dependencies = [
 [[package]]
 name = "derive_refineable"
 version = "0.1.0"
+source = "git+https://github.com/Fancy-Mumble/gpui?branch=develop#1c42c1584cf0f8b11f78725c9ae772f7f92d6386"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1205,6 +1207,7 @@ dependencies = [
 [[package]]
 name = "gpui"
 version = "0.2.2"
+source = "git+https://github.com/Fancy-Mumble/gpui?branch=develop#1c42c1584cf0f8b11f78725c9ae772f7f92d6386"
 dependencies = [
  "accesskit",
  "anyhow",
@@ -1267,6 +1270,7 @@ dependencies = [
 [[package]]
 name = "gpui_macros"
 version = "0.1.0"
+source = "git+https://github.com/Fancy-Mumble/gpui?branch=develop#1c42c1584cf0f8b11f78725c9ae772f7f92d6386"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -1277,6 +1281,7 @@ dependencies = [
 [[package]]
 name = "gpui_mobile"
 version = "0.1.0"
+source = "git+https://github.com/Fancy-Mumble/gpui?branch=develop#1c42c1584cf0f8b11f78725c9ae772f7f92d6386"
 dependencies = [
  "accesskit_android",
  "android-activity",
@@ -1311,6 +1316,7 @@ dependencies = [
 [[package]]
 name = "gpui_shared_string"
 version = "0.1.0"
+source = "git+https://github.com/Fancy-Mumble/gpui?branch=develop#1c42c1584cf0f8b11f78725c9ae772f7f92d6386"
 dependencies = [
  "schemars",
  "serde",
@@ -1320,6 +1326,7 @@ dependencies = [
 [[package]]
 name = "gpui_util"
 version = "0.1.0"
+source = "git+https://github.com/Fancy-Mumble/gpui?branch=develop#1c42c1584cf0f8b11f78725c9ae772f7f92d6386"
 dependencies = [
  "anyhow",
  "log",
@@ -1329,6 +1336,7 @@ dependencies = [
 [[package]]
 name = "gpui_wgpu"
 version = "0.1.0"
+source = "git+https://github.com/Fancy-Mumble/gpui?branch=develop#1c42c1584cf0f8b11f78725c9ae772f7f92d6386"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -1451,6 +1459,7 @@ dependencies = [
 [[package]]
 name = "http_client"
 version = "0.1.0"
+source = "git+https://github.com/Fancy-Mumble/gpui?branch=develop#1c42c1584cf0f8b11f78725c9ae772f7f92d6386"
 dependencies = [
  "anyhow",
  "bytes",
@@ -2827,6 +2836,7 @@ dependencies = [
 [[package]]
 name = "refineable"
 version = "0.1.0"
+source = "git+https://github.com/Fancy-Mumble/gpui?branch=develop#1c42c1584cf0f8b11f78725c9ae772f7f92d6386"
 dependencies = [
  "derive_refineable",
 ]
@@ -2976,6 +2986,7 @@ dependencies = [
 [[package]]
 name = "scheduler"
 version = "0.1.0"
+source = "git+https://github.com/Fancy-Mumble/gpui?branch=develop#1c42c1584cf0f8b11f78725c9ae772f7f92d6386"
 dependencies = [
  "async-task",
  "backtrace",
@@ -3293,6 +3304,7 @@ dependencies = [
 [[package]]
 name = "sum_tree"
 version = "0.1.0"
+source = "git+https://github.com/Fancy-Mumble/gpui?branch=develop#1c42c1584cf0f8b11f78725c9ae772f7f92d6386"
 dependencies = [
  "heapless",
  "rayon",
@@ -4586,6 +4598,7 @@ checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
 [[package]]
 name = "ztracing"
 version = "0.1.0"
+source = "git+https://github.com/Fancy-Mumble/gpui?branch=develop#1c42c1584cf0f8b11f78725c9ae772f7f92d6386"
 dependencies = [
  "tracing",
  "ztracing_macro",
@@ -4594,6 +4607,7 @@ dependencies = [
 [[package]]
 name = "ztracing_macro"
 version = "0.1.0"
+source = "git+https://github.com/Fancy-Mumble/gpui?branch=develop#1c42c1584cf0f8b11f78725c9ae772f7f92d6386"
 
 [[package]]
 name = "zune-core"
