@@ -1,7 +1,8 @@
 # android-host
 
-The Gradle project that packages a GPUI program built with gpui-next's
-Android platform into an APK: a `NativeActivity` that loads the Rust
+The Gradle project that packages a GPUI program built with
+[Fancy-Mumble/gpui](https://github.com/Fancy-Mumble/gpui)'s Android platform
+into an APK: a `NativeActivity` that loads the Rust
 library named in `app/build.gradle`, and the Java the Rust side calls.
 
 | Java (`app/src/main/java/dev/gpui/mobile/`) | What it is for |
@@ -21,17 +22,21 @@ settings, Bluetooth headsets, the foreground service (`remoteMessaging` and
 
 ## Build
 
-Offline, four workers, output on F: (`build.gradle` puts it in
-`F:/fancy-build/android-host`):
+The output goes to each project's `build` folder, or under the folder the
+Gradle property `fancyBuildDir` names (`-PfancyBuildDir=...`, or in
+`~/.gradle/gradle.properties`):
 
 ```powershell
-gradle --offline --max-workers=4 -p F:\fancy-migrate\android-host assembleDebug
+gradle --offline --max-workers=4 -p android-host assembleDebug
 # the test program (default)
 #   app/src/main/jniLibs/x86_64/libfancy_android_hello.so
 # the client
 gradle ... -PnativeLibraryName=fancy_mumble_android -PapplicationId=com.fancymumble.gpui assembleDebug
 #   app/src/main/jniLibs/x86_64/libfancy_mumble_android.so
 ```
+
+For a phone, the library goes in `app/src/main/jniLibs/arm64-v8a/` instead,
+with the NDK's `libc++_shared.so` for the same ABI beside it.
 
 The client's identifier is its own (`com.fancymumble.gpui`), never the web
 client's `com.fancymumble.app`: installing one must not replace or read the
