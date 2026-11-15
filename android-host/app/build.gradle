@@ -1,0 +1,19 @@
+apply plugin: 'com.android.application'
+android {
+    namespace 'com.fancymumble.gpuihost'
+    compileSdk 34
+    defaultConfig {
+        // The test program by default; the client builds with
+        // -PapplicationId=com.fancymumble.gpui -PnativeLibraryName=fancy_mumble_android
+        // (an identifier of its own: never the web client's com.fancymumble.app).
+        applicationId project.findProperty('applicationId') ?: 'com.fancymumble.gpuihost'
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName '0.1'
+        manifestPlaceholders['nativeLibraryName'] = project.findProperty('nativeLibraryName') ?: 'fancy_android_hello'
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    packaging { jniLibs { keepDebugSymbols += ['**/*.so'] } }
+    lint { abortOnError false; checkReleaseBuilds false }
+}
