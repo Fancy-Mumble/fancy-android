@@ -1,8 +1,9 @@
 # android-hello
 
-A small GPUI program for trying gpui-next's Android platform
-(`../gpui-next/crates/gpui_mobile`) on a device or the emulator, laid out
-as a messaging app is:
+A small GPUI program for trying the Android platform of
+[Fancy-Mumble/gpui](https://github.com/Fancy-Mumble/gpui) (`crates/gpui_mobile`,
+taken from its `develop` branch; the commit is in `Cargo.lock`) on a device or
+the emulator, laid out as a messaging app is:
 
 - a header with colour emoji, a counter button and a Panel button;
 - a row of buttons for the Android services the client needs (`src/services_demo.rs`):
@@ -21,15 +22,14 @@ Everything is logged under the logcat tag `fancy-hello`.
 
 ## Build and run
 
-Rules of this machine: build output on F:, six jobs, no debug info.
+With the NDK's clang set for the Android target (`CC_<target>`,
+`CARGO_TARGET_<TARGET>_LINKER`):
 
 ```powershell
-. <scratchpad>\agent-gpui-android\android-env.ps1    # NDK, CMake, Java, F: target dir
 cargo build --target x86_64-linux-android            # the emulator's ABI
-# then the host: ../android-host (copies the .so into jniLibs, Gradle offline)
+cargo build --target aarch64-linux-android           # a phone
+# then the host: ../android-host (the .so into jniLibs, then Gradle)
 ```
 
-`<scratchpad>\agent-android-backend\apk.ps1` does both and installs on
-`emulator-5554`; `emu.ps1 start|stop` runs the `fancy-gpui-next` emulator
-headless without audio; `ui.ps1` drives it (taps, swipes, text, screenshots
-to `F:\fancy-migrate\notes\android\`, logcat).
+To build against a local checkout of the GPUI fork, override it in
+`.cargo/config.toml` with `[patch."https://github.com/Fancy-Mumble/gpui"]`.
